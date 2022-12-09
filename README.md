@@ -1,6 +1,6 @@
 # URLClassLoader hot jar swapping
 
-The following example code shows the ability to hot jar swap an already loaded JAR-file.
+The following example code shows the ability to hot jar swap an already loaded JAR-file and get code execution by abusing the fact that inner classes when invoked still uses the JAR file when invoked.
 
 Tested on MacOS with OpenJDK (And also exploited on Apple's Author publisher using Transporter).
 
@@ -95,7 +95,41 @@ End of run, goodbye
 
 Showing that we can abuse the fact that inner/anonymous-classes are still being loaded from the physical JAR-file even if the URLClassLoader has already loaded the JAR from before we replaced it.
 
-## Explanation
+## Explanation of the issue
+
+This code repo tries to explain that you are able to overwrite already loaded JAR-files to get code execution under a few pre-requisites.
+
+The idea is that the JAR was initially loaded with URLClassLoader:
+
+```
+        URL[] classLoaderUrls = new URL[]{new URL("file://" + System.getProperty("user.dir") + "/HelloWorld.jar")};
+        URLClassLoader urlClassLoader = new URLClassLoader(classLoaderUrls);
+        Class<?> beanClass = urlClassLoader.loadClass("HelloWorld.Main");
+        Constructor<?> constructor = beanClass.getConstructor();
+        Object beanObj = constructor.newInstance();
+        Method method = beanClass.getMethod("hello");
+```
+
+And a secondary method was also loaded on boot but never invoked:
+
+```
+        // Initiating the secondary class on boot, this is the one we replace the inner class of
+        Class<?> secondaryClass = urlClassLoader.loadClass("HelloWorld.Secondary");
+        Constructor<?> secondaryConstructor = secondaryClass.getConstructor();
+        Object secondaryObj = secondaryConstructor.newInstance();
+        Method secondaryMethod = secondaryClass.getMethod("hello");
+```
+
+If the JAR is then replaced while the app is running, and the class that was loaded but never had any methods invoked also has inner classes, we're able to make it run different code from the new JAR if the invocation happens later:
+
+```
+        // Invoke secondary class hello that contains an inner class
+        secondaryMethod.invoke(secondaryObj);
+```
+
+So if this method contains an inner-class (They show up in the JAR as `$1.class`) and we replace the inner-class with something with the same size and compression rate, we're able to hot swap the JAR and get our own code to run.
+
+## Explanation of the exploit
 
 The anonymous class from the file `Exploit/HelloWorld/Secondary.java` compiles into the inner class `Exploit/HelloWorld/Secondary$1.class` which has the same size and compression rate as when `HelloWorld/Secondary.java` gets compiled and compressed. If the size or compression rate would differ, you would get a crash when clicking enter in `build-and-run.sh`.
 So if you would change `Exploit/HelloWorld/Secondary.java` to for example (`functionn` instead of `function:`):
