@@ -1,6 +1,6 @@
 # URLClassLoader hot jar swapping
 
-The following example code shows the ability to hot jar swap an already loaded JAR-file and get code execution by abusing the fact that inner classes still access the JAR file when invoked.
+The following example code shows the ability to hot jar swap an already loaded JAR-file and get code execution by abusing the fact that inner classes still access the JAR file when invoked, as long as the inode does not change.
 
 Tested on MacOS with OpenJDK (And also exploited on Apple's Author publisher using Transporter).
 
