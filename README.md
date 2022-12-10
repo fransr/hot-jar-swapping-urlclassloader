@@ -1,6 +1,6 @@
 # URLClassLoader hot jar swapping
 
-The following example code shows the ability to hot jar swap an already loaded JAR-file and get code execution by abusing the fact that inner classes when invoked still uses the JAR file when invoked.
+The following example code shows the ability to hot jar swap an already loaded JAR-file and get code execution by abusing the fact that inner classes still access the JAR file when invoked.
 
 Tested on MacOS with OpenJDK (And also exploited on Apple's Author publisher using Transporter).
 
@@ -59,6 +59,8 @@ Compare the exploit.jar and OrigHelloWorld.jar using unzip -lv
 Tell you if there's a diff or not based on size, compression rate and compression size
 Copy exploit.jar over the existing HelloWorld.jar regardless if there's a difference or not
 ```
+
+The copying part when overwriting HelloWorld.jar with exploit.jar is important, because if the inode changes the exploit will not succeed. A `mv` command will write a new inode, but `cp` into an existing file will not. The same thing happened using the ZIP-extract, the inode of the already existing JAR never changed, allowing the exploit to work.
 
 If you want to test the hot JAR swapping, run the `exploit.sh` in a different window after you run but before you click enter when calling `build-and-run.sh`:
 
